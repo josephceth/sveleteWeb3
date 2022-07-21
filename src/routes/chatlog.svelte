@@ -10,7 +10,8 @@
 	let connectedToGoerli = false;
 	let waitingForTransaction = false;
 	let abi = contractABI.abi;
-	let contractAddress = '0xdF7023A94fDe52F2795C8029c48a214392eCada3';
+	let contractAddress = '0x6727Cf3fe0449501d50531111AE226C3D5eD0Fc2';
+	// let contractAddress = "0xaB9d2D124E70Be7039d7CCba9AFd06AdC1Bc60C0"
 	let provider;
 	let contract;
 	let signer;
@@ -24,6 +25,7 @@
 	let message = '';
 	let isDisabled = false;
 	let contractMessages = [];
+	let contactList = [];
 
 	$: shortenedAddress = `${address.substring(0, 6)}....${address.substring(
 		address.length - 4,
@@ -87,7 +89,9 @@
 	async function ReadContract() {
 		contract = new ethers.Contract(contractAddress, abi, signer);
 		contractMessages = await contract.getMessages(address, toAddress);
+		contactList = await contract.getContactList();
 		console.log(contractMessages);
+		console.table(contactList);
 	}
 
 	const wait = function (ms = 1000) {
