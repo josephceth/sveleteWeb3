@@ -29,6 +29,7 @@
 	"dependencies": {
 		"daisyui": "^2.19.0",
 		"dayjs": "^1.11.4",
+		"ethereum-blockies-base64": "^1.0.2",
 		"ethers": "^5.6.9",
 		"svelte-loading-spinners": "^0.1.7"
 	}

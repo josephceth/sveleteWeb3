@@ -5,12 +5,14 @@
 	import { Wave } from 'svelte-loading-spinners';
 	import { fade } from 'svelte/transition';
 	import dayjs from 'dayjs';
+	import makeBlockie from 'ethereum-blockies-base64';
+	import { GoerliSwitch, ShortenAddress } from '../scripts/w3Helpers.js';
 
 	let metaMaskInstalled = false;
 	let connectedToGoerli = false;
 	let waitingForTransaction = false;
 	let abi = contractABI.abi;
-	let contractAddress = '0x6727Cf3fe0449501d50531111AE226C3D5eD0Fc2';
+	let contractAddress = '0xdB9e32F964Ac745008b272fbD252B21ce03B97D6';
 	// let contractAddress = "0xaB9d2D124E70Be7039d7CCba9AFd06AdC1Bc60C0"
 	let provider;
 	let contract;
@@ -26,11 +28,6 @@
 	let isDisabled = false;
 	let contractMessages = [];
 	let contactList = [];
-
-	$: shortenedAddress = `${address.substring(0, 6)}....${address.substring(
-		address.length - 4,
-		address.length
-	)}`;
 
 	onMount(() => {
 		if (window.ethereum) {
@@ -113,72 +110,81 @@
 		waitingForTransaction = false;
 		isDisabled = false;
 	}
-
-	async function GoerliSwitch() {
-		return window.ethereum.request({
-			method: 'wallet_switchEthereumChain',
-			params: [{ chainId: '0x5' }]
-		});
-	}
 </script>
 
-<div class="flex flex-col">
-	<button class="btn disabled:" on:click={Login}>Web3 Login</button>
-	<p>{ensName ? ensName : address ? shortenedAddress : 'No account'}</p>
-	<p>{balance ? balance : 'No balance'}</p>
-</div>
-
-{#if !metaMaskInstalled}
-	Install MetaMask
-{/if}
-
-{#if !connectedToGoerli}
-	<p>This dapp requires the Goerli testnet, please click the button below to change networks</p>
-	<button class="btn" on:click={GoerliSwitch}>Switch to Goerli</button>
-{:else}
-	<div class="grid grid-cols-8 gap-4">
-		<div class="col-span-4">
-			<input bind:value={toAddress} type="text" placeholder="address" />
-			<input bind:value={message} type="text" placeholder="Message" />
-			<button disabled={isDisabled} class="btn" on:click={SendTransaction}>Send Message</button>
-			<button disabled={isDisabled} class="btn" on:click={ReadContract}>Check Message</button>
+<div class="grid grid-cols-1 md:grid-cols-12 gap-x-2 gap-y-3">
+	{#if !metaMaskInstalled}
+		<div>Install MetaMask</div>
+	{/if}
+	{#if !connectedToGoerli}
+		<div>
+			<p>This dapp requires the Goerli testnet, please click the button below to change networks</p>
+			<button class="btn" on:click={GoerliSwitch}>Switch to Goerli</button>
+		</div>
+	{:else}
+		<div class="md:col-span-3">
+			{#each contactList as contact}
+				<div class="stat shadow rounded bg-neutral">
+					<img alt="blockie" src={makeBlockie(contact)} />
+					<div class="stat-title success">{contact}</div>
+				</div>
+			{/each}
+		</div>
+		<div class="md:col-span-9">
 			{#each contractMessages as message}
-				<div class="border-solid border-2 border-sky-800">
-					<p>{message.sender}</p>
+				<!-- <div class=" bg-green-700 p-3 text-white rounded"> -->
+				<div class="flex flex-grow">
+					<div class="shrink">
+						<img class="chatBlockie" alt="blockie" src={makeBlockie(message.sender)} />
+					</div>
+					<div class="flex">
+						<div class="basis-1/2">
+							{ShortenAddress(message.sender)}
+						</div>
+						<div class="basis-1/2">
+							{dayjs(new Date(message.timestamp.toString() * 1000).toString()).format(
+								'MM/DD/YYYY h:mm A'
+							)}
+						</div>
+					</div>
+				</div>
+				<div class="basis-full">
+					{message.message}
+				</div>
+				<!-- <p>{message.sender}</p>
 					<p>{message.message}</p>
 					<p>
 						{dayjs(new Date(message.timestamp.toString() * 1000).toString()).format(
 							'MM/DD/YYYY h:mm A'
 						)}
-					</p>
-				</div>
+					</p> -->
 			{/each}
 		</div>
-		<div class="col-span-4">
-			{#if waitingForTransaction}
-				<div class="flex flex-col">
-					<Wave size="40" color="#FF3E00" unit="px" duration="1s" />
-				</div>
-				{#if tx != null}
-					<div transition:fade>
-						<p>Waiting for transaction to be mined...</p>
-						<p>{tx.hash}</p>
-						<a
-							class="link link-accent"
-							href="https://goerli.etherscan.io/tx/{tx.hash}"
-							target="blank"
-						>
-							View on EtherScan
-						</a>
-					</div>
-				{/if}
-			{/if}
-			{#if confirmation.blockNumber != null}
+	{/if}
+</div>
+
+<div class="flex flex-col">
+	<button class="btn disabled:" on:click={Login}>Web3 Login</button>
+	<p>{ensName ? ensName : address ? ShortenAddress(address) : 'No account'}</p>
+	<p>{balance ? balance : 'No balance'}</p>
+</div>
+
+<div class="grid grid-cols-8 gap-4">
+	<div class="col-span-4">
+		<input bind:value={toAddress} type="text" placeholder="address" />
+		<input bind:value={message} type="text" placeholder="Message" />
+		<button disabled={isDisabled} class="btn" on:click={SendTransaction}>Send Message</button>
+		<button disabled={isDisabled} class="btn" on:click={ReadContract}>Check Message</button>
+	</div>
+	<div class="col-span-4">
+		{#if waitingForTransaction}
+			<div class="flex flex-col">
+				<Wave size="40" color="#FF3E00" unit="px" duration="1s" />
+			</div>
+			{#if tx != null}
 				<div transition:fade>
-					<p>Transaction was successful!</p>
-					<p>
-						{tx.hash.substring(0, 6)}....{tx.hash.substring(tx.hash.length - 5, tx.hash.length)}
-					</p>
+					<p>Waiting for transaction to be mined...</p>
+					<p>{tx.hash}</p>
 					<a
 						class="link link-accent"
 						href="https://goerli.etherscan.io/tx/{tx.hash}"
@@ -186,17 +192,42 @@
 					>
 						View on EtherScan
 					</a>
-
-					<p>Block Number: {confirmation.blockNumber}</p>
-					<a
-						class="link link-accent"
-						href="https://goerli.etherscan.io/block/{confirmation.blockNumber}"
-						target="blank"
-					>
-						View on EtherScan
-					</a>
 				</div>
 			{/if}
-		</div>
+		{/if}
+		{#if confirmation.blockNumber != null}
+			<div transition:fade>
+				<p>Transaction was successful!</p>
+				<p>
+					{tx.hash.substring(0, 6)}....{tx.hash.substring(tx.hash.length - 5, tx.hash.length)}
+				</p>
+				<a class="link link-accent" href="https://goerli.etherscan.io/tx/{tx.hash}" target="blank">
+					View on EtherScan
+				</a>
+
+				<p>Block Number: {confirmation.blockNumber}</p>
+				<a
+					class="link link-accent"
+					href="https://goerli.etherscan.io/block/{confirmation.blockNumber}"
+					target="blank"
+				>
+					View on EtherScan
+				</a>
+			</div>
+		{/if}
 	</div>
-{/if}
+</div>
+
+<style>
+	img {
+		width: 2rem;
+		height: 2rem;
+		border-radius: 50%;
+	}
+
+	.chatBlockie {
+		min-width: 2rem;
+		min-height: 2rem;
+		border-radius: 50%;
+	}
+</style>
