@@ -4,15 +4,16 @@
 	import contractABI from '../contracts/ChatLog.json';
 	import { Wave } from 'svelte-loading-spinners';
 	import { fade } from 'svelte/transition';
-	import dayjs from 'dayjs';
+	import MessageBox from '../components/MessageBox.svelte';
 	import makeBlockie from 'ethereum-blockies-base64';
 	import { GoerliSwitch, ShortenAddress } from '../scripts/w3Helpers.js';
+	import Contact from '../components/Contact.svelte';
 
 	let metaMaskInstalled = false;
 	let connectedToGoerli = false;
 	let waitingForTransaction = false;
 	let abi = contractABI.abi;
-	let contractAddress = '0xdB9e32F964Ac745008b272fbD252B21ce03B97D6';
+	let contractAddress = '0xEEBc82A1bb3ab763a3ba8ABACeb0Ab6a6468d0Ea';
 	// let contractAddress = "0xaB9d2D124E70Be7039d7CCba9AFd06AdC1Bc60C0"
 	let provider;
 	let contract;
@@ -28,6 +29,8 @@
 	let isDisabled = false;
 	let contractMessages = [];
 	let contactList = [];
+	let newContact = '';
+	let isChatLoading = true;
 
 	onMount(() => {
 		if (window.ethereum) {
@@ -47,6 +50,15 @@
 		signer = null;
 		balance = null;
 		location.reload();
+	}
+
+	async function LoadChat() {
+		isChatLoading = true;
+		alert('click');
+		console.log(this.id);
+		toAddress = this.id;
+		contractMessages = [...(await contract.getMessages(address, toAddress))];
+		isChatLoading = false;
 	}
 
 	const accountWasChanged = async (accounts) => {
@@ -85,10 +97,18 @@
 
 	async function ReadContract() {
 		contract = new ethers.Contract(contractAddress, abi, signer);
-		contractMessages = await contract.getMessages(address, toAddress);
-		contactList = await contract.getContactList();
+		contractMessages = [...(await contract.getMessages(address, toAddress))];
+		let listResponse = await contract.getContactList();
+		let test = listResponse.map((contact) => {
+			return {
+				address: contact,
+				name: ShortenAddress(contact),
+				blockie: makeBlockie(contact)
+			};
+		});
+		contactList = [...test];
 		console.log(contractMessages);
-		console.table(contactList);
+		console.log(contactList);
 	}
 
 	const wait = function (ms = 1000) {
@@ -110,6 +130,21 @@
 		waitingForTransaction = false;
 		isDisabled = false;
 	}
+
+	async function AddContact(address) {
+		isDisabled = true;
+		waitingForTransaction = true;
+		contract = new ethers.Contract(contractAddress, abi, signer);
+		tx = await contract.addContact(address);
+		confirmation = await provider.getTransaction(tx.hash);
+		while (confirmation.blockNumber == null) {
+			await wait(1000);
+			confirmation = await provider.getTransaction(tx.hash);
+		}
+		console.log(confirmation);
+		waitingForTransaction = false;
+		isDisabled = false;
+	}
 </script>
 
 <div class="grid grid-cols-1 md:grid-cols-12 gap-x-2 gap-y-3">
@@ -122,43 +157,27 @@
 			<button class="btn" on:click={GoerliSwitch}>Switch to Goerli</button>
 		</div>
 	{:else}
-		<div class="md:col-span-3">
-			{#each contactList as contact}
-				<div class="stat shadow rounded bg-neutral">
-					<img alt="blockie" src={makeBlockie(contact)} />
-					<div class="stat-title success">{contact}</div>
-				</div>
+		<div class="md:col-span-2">
+			<input bind:value={newContact} />
+			<button class="btn" on:click={AddContact(newContact)}>Add Contact</button>
+			{#each contactList as contact (contact)}
+				<Contact on:click={LoadChat} contact={contact.address} />
 			{/each}
 		</div>
-		<div class="md:col-span-9">
-			{#each contractMessages as message}
-				<!-- <div class=" bg-green-700 p-3 text-white rounded"> -->
-				<div class="flex flex-grow">
-					<div class="shrink">
-						<img class="chatBlockie" alt="blockie" src={makeBlockie(message.sender)} />
-					</div>
-					<div class="flex">
-						<div class="basis-1/2">
-							{ShortenAddress(message.sender)}
-						</div>
-						<div class="basis-1/2">
-							{dayjs(new Date(message.timestamp.toString() * 1000).toString()).format(
-								'MM/DD/YYYY h:mm A'
-							)}
-						</div>
-					</div>
-				</div>
-				<div class="basis-full">
-					{message.message}
-				</div>
-				<!-- <p>{message.sender}</p>
-					<p>{message.message}</p>
-					<p>
-						{dayjs(new Date(message.timestamp.toString() * 1000).toString()).format(
-							'MM/DD/YYYY h:mm A'
-						)}
-					</p> -->
+		<div class="md:col-span-8">
+			{#each contractMessages as message (message)}
+				<MessageBox
+					sender={message.sender}
+					timestamp={message.timestamp}
+					message={message.message}
+				/>
 			{/each}
+			<input
+				class="w-full bg-slate-800 border-2 border-slate-900 pt-2 pb-2 pl-6 pr-6"
+				bind:value={message}
+				type="text"
+				placeholder="+Message"
+			/>
 		</div>
 	{/if}
 </div>
@@ -172,7 +191,7 @@
 <div class="grid grid-cols-8 gap-4">
 	<div class="col-span-4">
 		<input bind:value={toAddress} type="text" placeholder="address" />
-		<input bind:value={message} type="text" placeholder="Message" />
+
 		<button disabled={isDisabled} class="btn" on:click={SendTransaction}>Send Message</button>
 		<button disabled={isDisabled} class="btn" on:click={ReadContract}>Check Message</button>
 	</div>
@@ -219,15 +238,4 @@
 </div>
 
 <style>
-	img {
-		width: 2rem;
-		height: 2rem;
-		border-radius: 50%;
-	}
-
-	.chatBlockie {
-		min-width: 2rem;
-		min-height: 2rem;
-		border-radius: 50%;
-	}
 </style>
