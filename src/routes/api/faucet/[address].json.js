@@ -8,7 +8,7 @@ export const GET = async (request) => {
 	let provider = new ethers.providers.JsonRpcProvider(process.env.GOERLI_URL);
 	let wallet = new ethers.Wallet(process.env.DEV_WALLET, provider);
 	try {
-		contract = new ethers.Contract(faucetAddress, abi, wallet);
+		let contract = new ethers.Contract(faucetAddress, abi, wallet);
 		let txn = await contract.faucet(request.params.address);
 		return {
 			status: 200,
