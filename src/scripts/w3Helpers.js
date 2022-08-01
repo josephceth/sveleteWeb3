@@ -18,3 +18,9 @@ export async function Login(provider) {
 	balance = parseFloat(ethers.utils.formatUnits(await signer.getBalance(), 'ether')).toFixed(4);
 	ensName = await provider.lookupAddress(account);
 }
+
+export function wait(ms = 1000) {
+	return new Promise((resolve) => {
+		setTimeout(resolve, ms);
+	});
+}

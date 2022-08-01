@@ -111,12 +111,6 @@
 		console.log(contactList);
 	}
 
-	const wait = function (ms = 1000) {
-		return new Promise((resolve) => {
-			setTimeout(resolve, ms);
-		});
-	};
-
 	async function SendTransaction() {
 		isDisabled = true;
 		waitingForTransaction = true;
