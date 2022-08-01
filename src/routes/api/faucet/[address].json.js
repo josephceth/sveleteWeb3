@@ -17,7 +17,7 @@ export const GET = async (request) => {
 	} catch (error) {
 		return {
 			status: 500,
-			body: { error: process.env.GOERLI_URL }
+			body: { error: provider }
 		};
 	}
 };
