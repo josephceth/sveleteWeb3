@@ -5,6 +5,7 @@
 	import { Wave } from 'svelte-loading-spinners';
 	import { fade } from 'svelte/transition';
 	import { GoerliSwitch, ShortenAddress, wait } from '../scripts/w3Helpers.js';
+	import { toast } from '@zerodevx/svelte-toast';
 
 	const faucetAddress = import.meta.env.VITE_FAUCET_ADDRESS;
 	let metaMaskInstalled = false;
@@ -25,6 +26,7 @@
 
 	onMount(() => {
 		if (window.ethereum) {
+			toast.push('Hello world!');
 			metaMaskInstalled = true;
 			provider = new ethers.providers.Web3Provider(window.ethereum);
 			window.ethereum.on('accountsChanged', accountWasChanged);
@@ -53,6 +55,7 @@
 			address = '';
 			signer = null;
 			balance = null;
+			connectedToGoerli = false;
 			return;
 		}
 
@@ -73,6 +76,9 @@
 				alert(`Error ${await response.text()}`);
 				return;
 			}
+			toast.push(`<strong>Funds have been requested from the faucet!</strong>`, {
+				duration: 15000
+			});
 			const tx = await response.json();
 			confirmation = await provider.getTransaction(tx.txnHash.hash);
 			while (confirmation.blockNumber == null) {
@@ -80,6 +86,8 @@
 				confirmation = await provider.getTransaction(tx.txnHash.hash);
 			}
 			waitingForTransaction = false;
+			toast.pop();
+			toast.push(`<strong>Funds received!</strong>`, { duration: 5000 });
 		} catch (error) {
 			console.log(error);
 			alert(error);

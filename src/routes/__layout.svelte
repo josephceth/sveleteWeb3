@@ -1,5 +1,6 @@
 <script>
 	import Login from '../components/Login.svelte';
+	import { SvelteToast } from '@zerodevx/svelte-toast';
 	import '../app.css';
 </script>
 
@@ -76,3 +77,4 @@
 	</div>
 </div>
 <slot />
+<SvelteToast />
